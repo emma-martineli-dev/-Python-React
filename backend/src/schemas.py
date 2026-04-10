@@ -6,8 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 T = TypeVar("T")
 
 MAX_TITLE_LEN = 255
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-ALLOWED_MIME_PREFIXES = ("image/", "text/", "application/pdf", "application/octet-stream")
 
 
 class FileItem(BaseModel):
@@ -27,12 +25,13 @@ class FileItem(BaseModel):
     updated_at: datetime
 
 
-class FileCreate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=MAX_TITLE_LEN, strip_whitespace=True)
-
-
 class FileUpdate(BaseModel):
-    title: str = Field(..., min_length=1, max_length=MAX_TITLE_LEN, strip_whitespace=True)
+    title: str = Field(..., min_length=1, max_length=MAX_TITLE_LEN)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, v: str) -> str:
+        return v.strip()
 
 
 class AlertItem(BaseModel):
