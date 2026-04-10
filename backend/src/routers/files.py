@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -13,21 +13,21 @@ router = APIRouter(prefix="/files", tags=["files"])
 
 @router.get("", response_model=Page[FileItem])
 async def list_files(
-    offset: int = 0,
-    limit: int = 20,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ):
     items, total = await file_service.list_files(session, offset=offset, limit=limit)
     return Page(items=items, total=total, offset=offset, limit=limit)
 
 
-@router.post("", response_model=FileItem, status_code=201)
+@router.post("", response_model=FileItem, status_code=status.HTTP_201_CREATED)
 async def create_file(
-    title: str = Form(...),
+    title: str = Form(..., min_length=1, max_length=255),
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_session),
 ):
-    file_item = await file_service.create_file(session, title=title, upload_file=file)
+    file_item = await file_service.create_file(session, title=title.strip(), upload_file=file)
     scan_file_for_threats.delay(file_item.id)
     return file_item
 

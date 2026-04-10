@@ -8,6 +8,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(text || `Request failed: ${res.status}`);
   }
+  // 204 No Content — nothing to parse
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -21,7 +23,7 @@ export const api = {
 
     create: (title: string, file: File) => {
       const form = new FormData();
-      form.append("title", title);
+      form.append("title", title.trim());
       form.append("file", file);
       return request<FileItem>("/files", { method: "POST", body: form });
     },
@@ -30,7 +32,7 @@ export const api = {
       request<FileItem>(`/files/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title: title.trim() }),
       }),
 
     delete: (id: string) =>
