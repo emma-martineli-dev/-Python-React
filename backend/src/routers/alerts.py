@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db import get_session
 from src.schemas import AlertItem, Page
-from src import repositories
+from src.repositories import alerts as alert_repo
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -14,5 +14,5 @@ async def list_alerts(
     limit: int = 20,
     session: AsyncSession = Depends(get_session),
 ):
-    items, total = await repositories.alerts.get_all(session, offset=offset, limit=limit)
+    items, total = await alert_repo.get_all(session, offset=offset, limit=limit)
     return Page(items=items, total=total, offset=offset, limit=limit)

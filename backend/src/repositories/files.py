@@ -11,7 +11,6 @@ from src.models import StoredFile
 
 
 async def get_all(session: AsyncSession, offset: int = 0, limit: int = 20) -> tuple[list[StoredFile], int]:
-    from sqlalchemy import func
     total = (await session.execute(select(func.count()).select_from(StoredFile))).scalar_one()
     result = await session.execute(
         select(StoredFile).order_by(StoredFile.created_at.desc()).offset(offset).limit(limit)

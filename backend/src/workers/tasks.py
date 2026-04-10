@@ -16,15 +16,17 @@ celery_app = Celery("file_tasks", broker=REDIS_URL, backend=REDIS_URL)
 _engine = create_async_engine(DB_URL)
 _session_maker = async_sessionmaker(_engine, expire_on_commit=False)
 
-_loop: asyncio.AbstractEventLoop | None = None
-
 
 def _run(coro):
-    global _loop
-    if _loop is None or _loop.is_closed():
-        _loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_loop)
-    return _loop.run_until_complete(coro)
+    """Run an async coroutine from a sync Celery task."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            raise RuntimeError
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
 
 
 # ── async implementations ────────────────────────────────────────────────────
@@ -36,6 +38,8 @@ async def _do_scan(file_id: str) -> None:
             return
 
         file_item.processing_status = "processing"
+        await session.commit()
+
         scan_status, scan_details, requires_attention = scan(
             file_item.original_name, file_item.size, file_item.mime_type
         )
