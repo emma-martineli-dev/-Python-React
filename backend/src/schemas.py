@@ -1,6 +1,9 @@
 from datetime import datetime
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
 
 
 class FileItem(BaseModel):
@@ -32,3 +35,10 @@ class AlertItem(BaseModel):
     level: str
     message: str
     created_at: datetime
+
+
+class Page(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    offset: int
+    limit: int
