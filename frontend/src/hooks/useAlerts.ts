@@ -11,7 +11,7 @@ export function useAlerts() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (newOffset = offset) => {
+  const load = useCallback(async (newOffset: number) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -24,9 +24,9 @@ export function useAlerts() {
     } finally {
       setIsLoading(false);
     }
-  }, [offset]);
+  }, []);
 
-  useEffect(() => { void load(0); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load(0); }, [load]);
 
   return { items, total, offset, isLoading, error, load, pageSize: PAGE_SIZE };
 }

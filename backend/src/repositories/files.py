@@ -23,16 +23,12 @@ async def get_by_id(session: AsyncSession, file_id: str) -> StoredFile | None:
 
 
 async def create_from_bytes(
-    session: AsyncSession,
-    title: str,
-    upload_file: UploadFile,
-    content: bytes,
+    session: AsyncSession, title: str, upload_file: UploadFile, content: bytes
 ) -> StoredFile:
     file_id = str(uuid4())
     suffix = Path(upload_file.filename or "").suffix
     stored_name = f"{file_id}{suffix}"
-    stored_path = STORAGE_DIR / stored_name
-    stored_path.write_bytes(content)
+    (STORAGE_DIR / stored_name).write_bytes(content)
 
     file_item = StoredFile(
         id=file_id,
@@ -61,8 +57,8 @@ async def update_title(session: AsyncSession, file_item: StoredFile, title: str)
 
 
 async def delete(session: AsyncSession, file_item: StoredFile) -> None:
-    stored_path = STORAGE_DIR / file_item.stored_name
-    if stored_path.exists():
-        stored_path.unlink()
+    path = STORAGE_DIR / file_item.stored_name
+    if path.exists():
+        path.unlink()
     await session.delete(file_item)
     await session.commit()

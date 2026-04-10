@@ -5,7 +5,7 @@ from httpx import AsyncClient
 pytestmark = pytest.mark.asyncio
 
 
-async def upload_file(client: AsyncClient, title: str = "Test", filename: str = "test.txt", content: bytes = b"hello"):
+async def _upload(client: AsyncClient, title: str = "Test", filename: str = "test.txt", content: bytes = b"hello"):
     return await client.post(
         "/files",
         data={"title": title},
@@ -13,16 +13,14 @@ async def upload_file(client: AsyncClient, title: str = "Test", filename: str = 
     )
 
 
-async def test_list_files_empty(client: AsyncClient):
+async def test_list_empty(client: AsyncClient):
     resp = await client.get("/files")
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["items"] == []
-    assert data["total"] == 0
+    assert resp.json() == {"items": [], "total": 0, "offset": 0, "limit": 20}
 
 
-async def test_create_file(client: AsyncClient):
-    resp = await upload_file(client)
+async def test_create(client: AsyncClient):
+    resp = await _upload(client)
     assert resp.status_code == 201
     data = resp.json()
     assert data["title"] == "Test"
@@ -30,54 +28,41 @@ async def test_create_file(client: AsyncClient):
     assert data["processing_status"] == "uploaded"
 
 
-async def test_create_empty_file_rejected(client: AsyncClient):
-    resp = await upload_file(client, content=b"")
-    assert resp.status_code == 400
+async def test_create_empty_rejected(client: AsyncClient):
+    assert (await _upload(client, content=b"")).status_code == 400
 
 
-async def test_get_file(client: AsyncClient):
-    create_resp = await upload_file(client)
-    file_id = create_resp.json()["id"]
-
+async def test_get(client: AsyncClient):
+    file_id = (await _upload(client)).json()["id"]
     resp = await client.get(f"/files/{file_id}")
     assert resp.status_code == 200
     assert resp.json()["id"] == file_id
 
 
-async def test_get_file_not_found(client: AsyncClient):
-    resp = await client.get("/files/nonexistent-id")
-    assert resp.status_code == 404
+async def test_get_not_found(client: AsyncClient):
+    assert (await client.get("/files/nonexistent")).status_code == 404
 
 
-async def test_update_file(client: AsyncClient):
-    create_resp = await upload_file(client)
-    file_id = create_resp.json()["id"]
-
+async def test_update(client: AsyncClient):
+    file_id = (await _upload(client)).json()["id"]
     resp = await client.patch(f"/files/{file_id}", json={"title": "Updated"})
     assert resp.status_code == 200
     assert resp.json()["title"] == "Updated"
 
 
-async def test_delete_file(client: AsyncClient):
-    create_resp = await upload_file(client)
-    file_id = create_resp.json()["id"]
-
-    resp = await client.delete(f"/files/{file_id}")
-    assert resp.status_code == 204
-
-    resp = await client.get(f"/files/{file_id}")
-    assert resp.status_code == 404
+async def test_delete(client: AsyncClient):
+    file_id = (await _upload(client)).json()["id"]
+    assert (await client.delete(f"/files/{file_id}")).status_code == 204
+    assert (await client.get(f"/files/{file_id}")).status_code == 404
 
 
-async def test_list_files_pagination(client: AsyncClient):
+async def test_pagination(client: AsyncClient):
     for i in range(5):
-        await upload_file(client, title=f"File {i}")
+        await _upload(client, title=f"File {i}")
 
-    resp = await client.get("/files?offset=0&limit=3")
-    data = resp.json()
-    assert data["total"] == 5
-    assert len(data["items"]) == 3
+    page1 = (await client.get("/files?offset=0&limit=3")).json()
+    assert page1["total"] == 5
+    assert len(page1["items"]) == 3
 
-    resp2 = await client.get("/files?offset=3&limit=3")
-    data2 = resp2.json()
-    assert len(data2["items"]) == 2
+    page2 = (await client.get("/files?offset=3&limit=3")).json()
+    assert len(page2["items"]) == 2
